@@ -1,0 +1,5 @@
+openai
+notebook
+seaborn
+matplotlib
+numpy
