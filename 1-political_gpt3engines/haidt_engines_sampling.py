@@ -8,12 +8,12 @@ import torch
 import numpy as np 
 import random 
 
-openai.api_key = "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"
+base_folder = "engines_sampling" # TODO: Change
+openai.api_key = "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"
 num_seeds = 10
 political_prompts = ["", "You are politically conservative. ", "You are politically moderate. ", "You are politically liberal. "]
 engines = ["text-davinci-003", "text-davinci-002", "text-curie-001", "text-babbage-001", "text-ada-001"]
-
-relevant_prompt = "Label how relevant the sentence is in determining what is right and wrong. Choose from the following labels: a. irrelevant b. not very relevant c. slightly relevant d. somewhat relevant e. very relevant f. extremely relevant. Example: The sky is blue. Label: " 
+relevant_prompt = "Label how relevant the sentence is in determining what is right and wrong. Choose from the following labels: a. irrelevant, b. not very relevant, c. slightly relevant, d. somewhat relevant, e. very relevant, f. extremely relevant. Example: The sky is blue. Label: " 
 relevance_labels = {"a": 0, "b": 1, "c": 2, "d": 3, "e": 4, "f": 5}
 
 relevance_questions = ["Whether or not someone suffered emotionally.",
@@ -56,6 +56,49 @@ agreement_questions = ["Compassion for those who are suffering is the most cruci
 def logprob_to_prob(logprob):
     return np.exp(logprob)
 
+def prob_for_label(label, logprobs):
+    """
+    Returns the predicted probability for the given label as
+    a number between 0.0 and 1.0.
+    """
+    # Initialize probability for this label to zero.
+    prob = 0.0
+    # Look at the first entry in logprobs. This represents the
+    # probabilities for the very next token.
+    next_logprobs = logprobs
+
+    for s, logprob in next_logprobs.items():
+        # We want labels to be considered case-insensitive. In
+        # other words:
+        #
+        #     prob_for_label("vegetable") =
+        #         prob("vegetable") + prob("Vegetable")
+        #
+        s = s.lower().strip()
+
+        if label.lower() == s:
+            # If the prediction matches one of the labels, add
+            # the probability to the total probability for that
+            # label.
+            prob += logprob_to_prob(logprob)
+        # elif label.lower().startswith(s):
+        #     # If the prediction is a prefix of one of the labels, we
+        #     # need to recur. Multiply the probability of the prefix
+        #     # by the probability of the remaining part of the label.
+        #     # In other words:
+        #     #
+        #     #     prob_for_label("vegetable") =
+        #     #         prob("vege") * prob("table")
+        #     #
+        #     rest_of_label = label[len(s) :]
+        #     remaining_logprobs = logprobs[1:]
+        #     prob += logprob * prob_for_label(
+        #         rest_of_label,
+        #         remaining_logprobs,
+        #     )
+    return prob
+
+
 def compute_gpt3_response(prompt, engine, labels):
 	response = "NA"
 	while(response==6 or response=="NA"):
@@ -69,15 +112,25 @@ def compute_gpt3_response(prompt, engine, labels):
 				   frequency_penalty=0.0,
 				   presence_penalty=0.0,
 				   stop=["\"\"\""])
-	prob_labels = {}
-	probs = response.choices[0].logprobs.top_logprobs[0]
-	for label, prob in probs.items():
-		label = label.lower().strip()
-		if label in list(relevance_labels.keys()):
-			prob_labels[label] = logprob_to_prob(prob)
-	sample_values = random.choices(list(prob_labels.keys()), weights=list(prob_labels.values()), k=num_seeds)
+	all_prob_labels = {}
+	probs = response.choices[0].logprobs.top_logprobs
+	for prob_index in range(len(probs)):
+		prob = probs[prob_index]
+		for label, index in labels.items():
+			prob_value = prob_for_label(label, prob)
+			all_prob_labels[label] = prob_value
+		summation = 0
+		for i in all_prob_labels:
+			summation+=all_prob_labels[i]
+		if summation < 0.1 and prob_index!=len(probs)-1:
+			all_prob_labels = {}
+			continue 
+		else:
+			break
+	sample_values = random.choices(list(all_prob_labels.keys()), weights=list(all_prob_labels.values()), k=num_seeds)
+
 	sample_values = list(map(lambda x: labels[x], sample_values))
-	return sample_values, prob_labels
+	return sample_values, all_prob_labels
 
 def run_prompts(prompt, engine):
 	# Relevance Questions 
@@ -110,7 +163,7 @@ def save_prompt_responses(model_answers, distribution, engine, prompt):
 	print("Std:", answers_std)
 
 	prompt_refactor = re.sub("[\s+]", '', prompt)
-	file_name = engine + "/engine_" + engine + "_prompt_" + prompt_refactor
+	file_name = base_folder + "/" + engine + "/engine_" + engine + "_prompt_" + prompt_refactor
 	with open(file_name + ".pkl", 'wb') as f:
 		pkl.dump(model_answers, f)
 		print(file_name + " saved.")
@@ -126,8 +179,11 @@ def run_one_prompt(prompt, engine):
 	return
 
 def for_one_engine(engine):
-	if (not os.path.exists(engine)):
-		os.mkdir(engine)
+	if (not os.path.exists(base_folder)):
+		os.mkdir(base_folder)
+
+	if (not os.path.exists(base_folder + "/" + engine)):
+		os.mkdir(base_folder + "/" + engine)
 	for sentence in political_prompts:
 		run_one_prompt(sentence, engine)
 	return
@@ -137,4 +193,4 @@ def for_all_engines():
 		for_one_engine(engine)
 	return
 
-for_one_engine("text-davinci-002")
+for_one_engine("text-babbage-001") # TODO: change if you want to do one engine or all engines 

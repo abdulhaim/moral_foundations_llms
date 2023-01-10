@@ -3,3 +3,5 @@ notebook
 seaborn
 matplotlib
 numpy
+scikit-learn
+plotly
