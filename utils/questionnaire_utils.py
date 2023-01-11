@@ -1,5 +1,6 @@
 
 import openai
+import torch
 openai.api_key = "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"
 num_seeds = 10
 political_prompts = ["", "You are politically conservative. ", "You are politically moderate. ", "You are politically liberal. "]
