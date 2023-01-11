@@ -1,4 +1,3 @@
-
 import sys
 import os 
 parent_directory =  os.path.dirname(os.getcwd())
@@ -14,8 +13,6 @@ import random
 from tqdm import tqdm
 from utils.questionnaire_utils import *
 from utils.gpt3_utils import *
-import pandas as pd
-from random import sample
 
 global generative
 
@@ -65,28 +62,23 @@ def run_one_prompt(engine, prompt):
 	save_prompt_responses(engine, prompt, model_answers)
 	return
 
-def for_one_engine(engine, prompts):
+def for_one_engine(engine):
 	# Create folder with engine name 
 	print("for", engine, "********************************")
 	if (not os.path.exists(base_folder + "/" + engine)):
 		os.mkdir(base_folder + "/" + engine)
 
-	for prompt in prompts:
-		run_one_prompt(engine, prompt)
+	for sentence in political_prompts:
+		run_one_prompt(engine, sentence)
 	return
 
-if __name__ == '__main__':	
-	random.seed(0)
-	num_prompts = 50
-	df = pd.read_csv("movie_conversations.tsv", encoding='utf-8-sig', sep="\t")
-	df = pd.read_csv("movie_lines.tsv", encoding='utf-8-sig',header = None)
-	lines = df[0].str.split('\t')
-	dialogue_lines = list()
-	for x in lines:
-	    dialogue_lines.append(x[4])
 
-	prompts = sample(dialogue_lines, num_prompts)
+def for_all_engines():
+	for engine in engines:
+		for_one_engine(engine)
+	return
 
+if __name__ == '__main__':
 	# Settings
 	base_folder = "generative_gpt3" # TODO: Change base folder (this is where all models will be saved)
 	generative = True # whether generative (True) or scoring (False)
@@ -95,12 +87,11 @@ if __name__ == '__main__':
 	if (not os.path.exists(base_folder)):
 		os.mkdir(base_folder)
 
+	## for all engines
+	for_all_engines()
+
 	# for one engine
-	engine_name = "text-davinci-002"
-	for_one_engine(engine_name, prompts) 
-
-
-
-
+	# engine_name = "text-ada-001"
+	# for_one_engine(engine_name) 
 
 
