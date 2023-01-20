@@ -40,7 +40,7 @@ def run_prompts(engine, prompt):
 			# Input to Model
 			llm_prompt = prompt + agreement_prompt + random_answer + ". " + agreement_questions[i] + " Label: " 
 			# Replace function to get answer from language model
-			answers = compute_gpt3_response(engine, llm_prompt, relevance_labels, generative) 
+			answers = compute_gpt3_response(engine, llm_prompt, agreement_labels, generative) 
 			seed_answers.extend(answers)
 		model_answer_list.append(seed_answers)
 	return model_answer_list
@@ -83,7 +83,7 @@ if __name__ == '__main__':
 	lines = df[0].str.split('\t')
 	dialogue_lines = list()
 	for x in lines:
-	    dialogue_lines.append(x[4])
+	    dialogue_lines.append(x[4] + " ")
 
 	prompts = sample(dialogue_lines, num_prompts)
 

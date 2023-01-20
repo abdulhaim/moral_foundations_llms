@@ -1,7 +1,7 @@
 
 import openai
 import torch
-openai.api_key = "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"
+openai.api_key = "KEY HERE"
 num_seeds = 10
 political_prompts = ["", "You are politically conservative. ", "You are politically moderate. ", "You are politically liberal. "]
 engines = ["text-davinci-003", "text-davinci-002", "text-curie-001", "text-babbage-001"]
